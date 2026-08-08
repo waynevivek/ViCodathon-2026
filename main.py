@@ -111,21 +111,30 @@ async def interview_endpoint(req: InterviewRequest):
 
         # 5. Execute action logic
         if action_dict["action"] == "advance":
-            # Add previous day to days_covered set
+            # Add previous day to days_covered set (since candidate just answered question on previous day)
             prev_day = current_day_info.get("day")
             if prev_day is not None:
                 session["days_covered"].add(int(prev_day))
 
-            # Move current day pointer to next_day (code is authoritative)
+            # Move current day pointer to next_day (pointer change ONLY)
             session_store.advance_day_pointer(session, suggested_next_day=action_dict.get("next_day"))
 
-            # Retrieve the NEW current day info AFTER updating pointer
+            # Retrieve NEW current day info AFTER updating pointer
             new_day_info = session_store.get_current_day_info(session)
 
             # Generate opening question specifically using NEW day's curriculum context (title, tools, objectives)
             llm_question = llm.generate_opening_question(
                 cand_summary, new_day_info, session["transcript"], req.message
             )
+
+            # Add NEW day to days_covered because a question for it is being delivered to the candidate
+            new_day = new_day_info.get("day")
+            if new_day is not None:
+                session["days_covered"].add(int(new_day))
+
+            # An advance delivers a brand-new opening question for the new day to the candidate,
+            # so the interview MUST NOT terminate on this turn before the candidate answers it.
+            is_done = False
         else:
             # Follow-up: Stay on current day, ensure current day is in days_covered
             cur_day = current_day_info.get("day")
@@ -133,19 +142,14 @@ async def interview_endpoint(req: InterviewRequest):
                 session["days_covered"].add(int(cur_day))
             llm_question = action_dict["question"]
 
+            # Evaluate termination condition: ONLY terminate if 8+ questions asked AND 4+ distinct days covered
+            is_done = (
+                session["questions_asked"] >= 8 and
+                len(session["days_covered"]) >= 4
+            )
+
         # 6. Append LLM's question to transcript as assistant turn
         session["transcript"].append({"role": "assistant", "content": llm_question})
-
-        # 7. TERMINATION CONDITION LOGIC (per AGENTS.md hard requirements):
-        # The interview is complete (done = True) ONLY when:
-        #   a) questions_asked >= 8 (Minimum 8 questions asked total)
-        #   AND
-        #   b) len(days_covered) >= 4 (Questions span at least 4 distinct curriculum days)
-        # If both conditions are satisfied, the interview terminates. Otherwise it continues.
-        is_done = (
-            session["questions_asked"] >= 8 and
-            len(session["days_covered"]) >= 4
-        )
 
         if is_done:
             return InterviewResponse(

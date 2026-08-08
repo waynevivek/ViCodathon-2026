@@ -42,7 +42,7 @@ def create_session(
         "ranked_weak_spots": ranked_weak_spots,
         "current_day_index": current_day_index,
         "questions_asked": 0,
-        "days_covered": days_covered,  # Set of integer day numbers
+        "days_covered": days_covered,  # Set of integer day numbers that have received a question
         "transcript": [],
         "created_at": time.time(),
     }
@@ -80,6 +80,9 @@ def advance_day_pointer(session: Dict[str, Any], suggested_next_day: Optional[in
     Advances session day pointer to the next weak spot.
     Code is authoritative: checks if suggested_next_day exists in ranked_weak_spots and is unprobed.
     Otherwise advances to the next unprobed day in ranked_weak_spots order.
+    
+    NOTE: Does NOT automatically add the new day to days_covered here.
+    Days are added to days_covered ONLY when a question is actually generated and returned for that day.
     """
     ranked = session.get("ranked_weak_spots", [])
     days_covered: Set[int] = session.get("days_covered", set())
@@ -90,7 +93,6 @@ def advance_day_pointer(session: Dict[str, Any], suggested_next_day: Optional[in
             spot_day = int(spot.get("day"))
             if spot_day == int(suggested_next_day) and spot_day not in days_covered:
                 session["current_day_index"] = idx
-                days_covered.add(spot_day)
                 return
 
     # Fallback to next unprobed day in ranked list
@@ -98,14 +100,12 @@ def advance_day_pointer(session: Dict[str, Any], suggested_next_day: Optional[in
         spot_day = int(spot.get("day"))
         if spot_day not in days_covered:
             session["current_day_index"] = idx
-            days_covered.add(spot_day)
             return
 
     # If all ranked spots have been covered, move to next index if possible
     next_idx = session.get("current_day_index", 0) + 1
     if next_idx < len(ranked):
         session["current_day_index"] = next_idx
-        days_covered.add(int(ranked[next_idx].get("day")))
 
 
 def delete_session(session_id: str) -> bool:
