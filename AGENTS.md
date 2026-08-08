@@ -1,0 +1,151 @@
+# AGENTS.md — AI Interview Agent (ViCodathon 2026)
+
+## What this project is
+An AI agent that conducts a multi-turn technical interview with a candidate, personalized to
+their actual progress through a 31-day AI Cohort curriculum. This is a hackathon submission —
+optimize for correctness against the spec below and for a clean, incremental commit history,
+not for maximum architectural sophistication.
+
+## Stack (fixed — do not swap these without being told to)
+- Backend: Python 3.11+, FastAPI
+- LLM provider: Groq API (OpenAI-compatible client), model: llama-3.3-70b-versatile
+  (fallback model if needed: openai/gpt-oss-120b)
+- Frontend: a single static HTML+JS file served by FastAPI itself at `/` — no separate
+  frontend framework, no separate deployment
+- Hosting target: Render free web service tier
+- Session state: in-memory Python dict keyed by sessionId. No database required.
+
+## Repo layout (flat — do not create backend/ or frontend/ subfolders)
+```
+main.py            # FastAPI app, routes, startup
+models.py          # Pydantic request/response models matching the contract below exactly
+session_store.py   # in-memory session state + the day-coverage/question-count logic
+llm.py             # Groq client wrapper, prompt construction, structured-output parsing
+static/index.html  # minimal chat UI, calls /api/interview
+requirements.txt
+AGENTS.md
+PROMPTS.md
+README.md
+.gitignore          # must include .env
+```
+
+## THE API CONTRACT — this is fixed by the hackathon's technical spec. Do not deviate.
+
+Single endpoint: `POST /api/interview`. No authentication.
+
+### Turn 1 — starting an interview
+Request:
+```json
+{
+  "sessionId": "abc-123",
+  "candidate": { ...one candidate object, shape below... }
+}
+```
+Response:
+```json
+{ "reply": "Welcome. Let's begin your interview.", "done": false }
+```
+
+### Turn 2+ — every following message
+Request:
+```json
+{ "sessionId": "abc-123", "message": "the candidate's latest answer" }
+```
+Response:
+```json
+{ "reply": "...", "done": false }
+```
+
+### Final turn — when the interview is complete
+Response:
+```json
+{
+  "reply": "Interview completed.",
+  "done": true,
+  "feedback": {
+    "summary": "string",
+    "strengths": ["string", "..."],
+    "gaps": ["string", "..."],
+    "next": ["string", "..."]
+  }
+}
+```
+
+Also add a `GET /health` route returning `{"status": "ok"}` — used to wake the Render free
+instance from sleep before a demo, not part of the hackathon spec itself.
+
+## The `candidate` object shape (exactly one entry from candidates.json, NOT the array wrapper)
+```json
+{
+  "member": {
+    "id": "CAND-001",
+    "name": "Sarah Johnson",
+    "jobRole": "Senior Data Engineer",
+    "yearsExperience": 9,
+    "education": "MS Computer Science",
+    "status": "COMPLETED"
+  },
+  "missions": [
+    { "day": 7, "title": "Embeddings Explained", "passed": true, "attempts": 1 },
+    { "day": 29, "title": "Monitoring, Logging & Observability", "skipped": true }
+  ],
+  "signals": { "commitDays": 28, "missionsCompleted": 30, "missionsFirstTry": 20 }
+}
+```
+- `missions[]` entries can have `passed` + `attempts` (attempted and graded), OR `skipped: true`
+  (never attempted). Not every entry has every field — check with `.get()` / Optional fields.
+- `attempts >= 3`, `skipped: true`, or `passed: false` are struggle signals — these days should
+  be prioritized for interview questions and deeper follow-ups.
+
+## The curriculum.json shape (loaded once at startup, read-only reference data)
+```json
+{
+  "cohort": "AI Cohort · 31 days · 8 modules",
+  "modules": [ { "n": 1, "title": "Environment & Tooling", "days": [1, 3] }, ... ],
+  "days": [
+    {
+      "day": 7,
+      "title": "Embeddings Explained",
+      "type": "AI_CORE",
+      "tools": ["Sentence Transformers", "OpenAI Embeddings", "Scikit-learn", "Matplotlib"],
+      "objectives": ["Understand how text is converted into vector embeddings", "..."]
+    }
+  ]
+}
+```
+
+## CRITICAL RULE: match by `day` NUMBER, never by title string
+A candidate's mission title for day 16 does not always exactly match curriculum.json's title
+for day 16 in the provided data. All lookups, joins, and matching between candidate missions
+and curriculum days MUST use the integer `day` field. Never match or compare on `title`.
+
+## Hard requirements (must be true of the final behavior, enforce in code, not just via prompting)
+- Minimum 8 questions asked total in an interview
+- Those questions must span at least 4 distinct curriculum `day` numbers
+- Both of the above are tracked with explicit counters/sets in `session_store.py` — the LLM's
+  per-turn decision (ask follow-up vs move to next day) is a *suggestion* the code checks
+  against these counters before deciding whether the interview can actually end
+- Follow-up questions must be generated from what the candidate actually just said, not
+  generic/pre-scripted — this is why the per-turn LLM call receives the recent conversation
+  transcript, not just the day's static objectives
+- Feedback at the end must be generated by a dedicated final LLM call over the full transcript,
+  not just the model's last reply reformatted
+
+## Explicitly out of scope — do not build these even if it seems easy
+- Voice interaction
+- User authentication / login
+- Persistent accounts or a database
+- Long-term memory across separate interview sessions
+- A mobile app
+
+## Environment variables (never hardcode secrets, never commit .env)
+- `GROQ_API_KEY` — required
+- `GEMINI_API_KEY` — optional fallback, not wired in by default
+
+## Working conventions for this repo
+- Commit after each working milestone, not after every small edit. Push immediately after
+  each commit — do not batch multiple commits before pushing.
+- Every commit that adds/changes a feature should be paired with a PROMPTS.md entry in the
+  same commit describing the prompt that produced it.
+- Prefer explicit, readable code over clever abstractions — this needs to be explainable to
+  hackathon judges, not maintained for years.
