@@ -1,5 +1,6 @@
 """
 test_interview_flow.py - Full multi-turn test simulating candidate interview
+Now validates Phase 4 real feedback generation via dedicated LLM call.
 """
 
 import json
@@ -38,7 +39,7 @@ def test_full_simulated_interview():
     session_id = "test-session-multi-turn"
 
     print("\n========================================================")
-    print("STARTING MULTI-TURN SIMULATED INTERVIEW TEST")
+    print("STARTING MULTI-TURN SIMULATED INTERVIEW TEST (Phase 4)")
     print("========================================================\n")
 
     # --- TURN 1 ---
@@ -115,17 +116,42 @@ def test_full_simulated_interview():
             print(f"Final days_covered count: {len(days_cov)} ({days_cov})")
             print(f"Final Reply: {data['reply']}")
             print("========================================================")
+
+            # Phase 3 invariants still hold
             assert q_asked >= 8
             assert len(days_cov) >= 4
-            assert data["reply"] == "Interview complete. Generating feedback..."
-            assert data["feedback"] is None
-            
+
+            # Phase 4: reply text changed to include feedback delivery message
+            assert data["reply"] == "Interview complete. Thank you for your time — here's your feedback."
+
+            # Phase 4: feedback is now a real dict, not None
+            assert data["feedback"] is not None, "feedback must not be None — real LLM feedback expected!"
+            feedback = data["feedback"]
+
+            # Validate contract shape: {summary, strengths[], gaps[], next[]}
+            assert isinstance(feedback["summary"], str) and len(feedback["summary"]) > 0, "summary must be non-empty string"
+            assert isinstance(feedback["strengths"], list) and len(feedback["strengths"]) >= 1, "strengths must be non-empty list"
+            assert isinstance(feedback["gaps"], list) and len(feedback["gaps"]) >= 1, "gaps must be non-empty list"
+            assert isinstance(feedback["next"], list) and len(feedback["next"]) >= 1, "next must be non-empty list"
+
+            # All items in lists must be strings
+            for key in ["strengths", "gaps", "next"]:
+                for item in feedback[key]:
+                    assert isinstance(item, str), f"Each item in {key} must be a string"
+
+            print("\n========================================================")
+            print("FULL FEEDBACK JSON (VERBATIM):")
+            print("========================================================")
+            print(json.dumps(feedback, indent=2))
+            print("========================================================")
+
             # VERIFY THAT EVERY DAY IN days_covered HAS AT LEAST ONE REAL Q&A PAIR IN THE TRANSCRIPT
             transcript = session["transcript"]
             for day_num in days_cov:
                 has_q = any(turn["role"] == "assistant" for turn in transcript)
                 assert has_q, f"Day {day_num} has no assistant question in transcript!"
             print("VERIFIED: Every day in days_covered has real questions and candidate answers in the transcript!")
+            print("VERIFIED: Feedback contract shape is correct (summary, strengths[], gaps[], next[])")
             break
 
 if __name__ == "__main__":

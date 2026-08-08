@@ -62,3 +62,16 @@
 > Re-run test_interview_flow.py after the fix and confirm each interviewer question, once advance happens, is actually about the correct new day's curriculum content.
 > 
 > Clarify: does the LLM's own returned "question" text get used directly, or does the code regenerate/re-prompt after updating the pointer?
+
+## Phase 4: Dedicated Feedback Generation via Final LLM Call (2026-08-08)
+
+### Prompt
+> Read AGENTS.md fully before starting — confirm the feedback response shape: {summary, strengths[], gaps[], next[]}, and the design decision that feedback is generated via a DEDICATED final LLM call over the full transcript, not reused from the last chat turn.
+> 
+> Goal for this phase: when the interview terminates (questions_asked >= 8 AND 4 distinct days covered), generate real, honest, specific feedback instead of the current null placeholder.
+> 
+> Build:
+> 1. llm.py — add a new function (generate_interview_feedback) that takes the full transcript, candidate profile, and probed days, sends ONE dedicated Groq call to synthesize honest feedback grounded in specific candidate statements. Includes retry-once-then-fallback pattern matching the per-turn action calls.
+> 2. main.py — wire feedback generation into termination path, returning real Feedback model instead of null.
+> 3. Test locally — full simulated interview through to real feedback, fallback path validation, and Phase 1-3 regression checks.
+

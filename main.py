@@ -152,10 +152,24 @@ async def interview_endpoint(req: InterviewRequest):
         session["transcript"].append({"role": "assistant", "content": llm_question})
 
         if is_done:
+            # Build list of curriculum day dicts actually probed (for the feedback LLM call)
+            probed_days = []
+            for spot in session["ranked_weak_spots"]:
+                if int(spot.get("day", -1)) in session["days_covered"]:
+                    probed_days.append(spot)
+
+            # DEDICATED final LLM call over the full transcript — per AGENTS.md requirement
+            feedback_dict = llm.generate_interview_feedback(
+                transcript=session["transcript"],
+                candidate_profile=session["candidate"],
+                probed_days=probed_days,
+            )
+
+            from models import Feedback
             return InterviewResponse(
-                reply="Interview complete. Generating feedback...",
+                reply="Interview complete. Thank you for your time — here's your feedback.",
                 done=True,
-                feedback=None
+                feedback=Feedback(**feedback_dict),
             )
         else:
             return InterviewResponse(
