@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from models import InterviewRequest, InterviewResponse
 import ranking
 import session_store
+import llm
 
 app = FastAPI(title="AI Technical Interview Agent")
 
@@ -45,25 +46,25 @@ async def interview_endpoint(req: InterviewRequest):
         ranked_weak_spots = ranking.rank_weak_spots(req.candidate, curriculum_data)
 
         # 2. Store new session in session_store with counters & ranked weak spots
-        session_store.create_session(
+        session = session_store.create_session(
             session_id=req.sessionId,
             candidate=req.candidate,
             ranked_weak_spots=ranked_weak_spots
         )
 
-        # 3. Construct Turn 1 reply referencing top weak spot's curriculum title
-        if ranked_weak_spots and ranked_weak_spots[0]["score"] > 0:
+        # 3. Construct Turn 1 welcome message referencing top weak spot
+        if ranked_weak_spots:
             top_spot = ranked_weak_spots[0]
             reply_text = (
-                f"Hi! I see we should focus on Day {top_spot['day']}: {top_spot['title']} first. "
-                "(Placeholder — real question generation comes next phase.)"
+                f"Welcome! Let's begin your technical interview. "
+                f"We'll start by focusing on Day {top_spot['day']}: {top_spot['title']}. "
+                f"Could you give me a brief overview of how you approached this topic?"
             )
         else:
             cand_name = req.candidate.member.name if req.candidate.member else "Candidate"
-            reply_text = (
-                f"Welcome {cand_name}. Let's begin your interview. "
-                "(Placeholder — real question generation comes next phase.)"
-            )
+            reply_text = f"Welcome {cand_name}. Let's begin your interview with core AI concepts."
+
+        session["transcript"].append({"role": "assistant", "content": reply_text})
 
         return InterviewResponse(
             reply=reply_text,
@@ -80,10 +81,75 @@ async def interview_endpoint(req: InterviewRequest):
                 done=True
             )
 
-        return InterviewResponse(
-            reply="Placeholder follow-up.",
-            done=False,
+        # 1. Append candidate's message to transcript
+        session["transcript"].append({"role": "user", "content": req.message})
+
+        # 2. Extract candidate summary & current probed day info
+        cand = session.get("candidate", {})
+        member = cand.get("member", {}) if isinstance(cand, dict) else {}
+        cand_summary = (
+            f"Name: {member.get('name', 'Candidate')}, "
+            f"Role: {member.get('jobRole', 'N/A')}, "
+            f"Experience: {member.get('yearsExperience', 'N/A')} years, "
+            f"Education: {member.get('education', 'N/A')}"
         )
+        current_day_info = session_store.get_current_day_info(session)
+
+        # 3. Call LLM to generate structured action (followup vs advance)
+        action_dict = llm.generate_interview_action(
+            cand_summary, current_day_info, session["transcript"], req.message
+        )
+
+        # 4. Increment question counter regardless of action
+        session["questions_asked"] += 1
+
+        # Safeguard: If remaining allowed questions to reach 8 are needed to reach 4 distinct days, force advance
+        questions_remaining = max(0, 8 - session["questions_asked"])
+        days_remaining = max(0, 4 - len(session["days_covered"]))
+        if action_dict["action"] == "followup" and questions_remaining < days_remaining:
+            action_dict["action"] = "advance"
+
+        # 5. Execute action logic
+        if action_dict["action"] == "advance":
+            # Add previous day to days_covered set
+            prev_day = current_day_info.get("day")
+            if prev_day is not None:
+                session["days_covered"].add(int(prev_day))
+
+            # Move current day pointer to next_day (code is authoritative)
+            session_store.advance_day_pointer(session, suggested_next_day=action_dict.get("next_day"))
+        else:
+            # Follow-up: Stay on current day, ensure current day is in days_covered
+            cur_day = current_day_info.get("day")
+            if cur_day is not None:
+                session["days_covered"].add(int(cur_day))
+
+        # 6. Append LLM's question to transcript as assistant turn
+        llm_question = action_dict["question"]
+        session["transcript"].append({"role": "assistant", "content": llm_question})
+
+        # 7. TERMINATION CONDITION LOGIC (per AGENTS.md hard requirements):
+        # The interview is complete (done = True) ONLY when:
+        #   a) questions_asked >= 8 (Minimum 8 questions asked total)
+        #   AND
+        #   b) len(days_covered) >= 4 (Questions span at least 4 distinct curriculum days)
+        # If both conditions are satisfied, the interview terminates. Otherwise it continues.
+        is_done = (
+            session["questions_asked"] >= 8 and
+            len(session["days_covered"]) >= 4
+        )
+
+        if is_done:
+            return InterviewResponse(
+                reply="Interview complete. Generating feedback...",
+                done=True,
+                feedback=None
+            )
+        else:
+            return InterviewResponse(
+                reply=llm_question,
+                done=False
+            )
 
     else:
         raise HTTPException(

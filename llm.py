@@ -1,0 +1,220 @@
+"""
+llm.py - Groq LLM integration and dynamic action parser for AI Technical Interview Agent.
+
+Model: llama-3.3-70b-versatile
+API Key: Read strictly from GROQ_API_KEY environment variable (.env).
+Enforces structured JSON actions:
+- {"action": "followup", "question": "..."}
+- {"action": "advance", "question": "...", "next_day": <int>}
+
+Includes retry-once-then-fallback mechanism for resilience against malformed LLM responses.
+"""
+
+import json
+import logging
+import os
+from typing import Dict, Any, List, Optional
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+# Primary model name per specification
+MODEL_NAME = "llama-3.3-70b-versatile"
+
+
+def get_groq_client() -> Groq:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY environment variable is missing.")
+    return Groq(api_key=api_key)
+
+
+def parse_and_validate_action(raw_text: str) -> Optional[Dict[str, Any]]:
+    """
+    Parses and validates raw LLM output into structured action dictionary.
+    Expected structure:
+    {"action": "followup" | "advance", "question": "non-empty string", "next_day": Optional[int]}
+    """
+    if not raw_text:
+        return None
+
+    cleaned = raw_text.strip()
+    # Remove markdown backticks if present
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    action = data.get("action")
+    question = data.get("question")
+
+    if action not in ["followup", "advance"]:
+        return None
+
+    if not isinstance(question, str) or not question.strip():
+        return None
+
+    next_day = data.get("next_day")
+    if next_day is not None:
+        try:
+            next_day = int(next_day)
+        except (ValueError, TypeError):
+            next_day = None
+
+    return {
+        "action": action,
+        "question": question.strip(),
+        "next_day": next_day
+    }
+
+
+def construct_prompt_messages(
+    candidate_summary: str,
+    current_day_info: Dict[str, Any],
+    transcript: List[Dict[str, str]],
+    candidate_message: str,
+    strict_retry: bool = False
+) -> List[Dict[str, str]]:
+    """
+    Constructs the system and user prompt messages for the Groq API call.
+    """
+    system_content = (
+        "You are an expert AI Technical Interviewer conducting a dynamic interview based on a 31-day AI curriculum.\n"
+        "Your goal is to probe the candidate's understanding of key technical concepts, focusing on their weak-spot days.\n\n"
+        "You MUST respond ONLY with a raw JSON object (no markdown code blocks, no ```json formatting, no conversational text).\n"
+        "The JSON MUST match one of the following schemas:\n\n"
+        '1. {"action": "followup", "question": "<your technical follow-up question>"}\n'
+        '   Use "followup" if the candidate\'s latest answer was shallow, vague, incomplete, or incorrect on the current topic.\n\n'
+        '2. {"action": "advance", "question": "<opening technical question for next topic>", "next_day": <integer_day_number_or_null>}\n'
+        '   Use "advance" if the candidate demonstrated clear understanding or if follow-ups on the current topic are finished.\n\n'
+        "Rules for questions:\n"
+        "- Base follow-up questions directly on what the candidate just said in their latest message.\n"
+        "- Ensure questions are technical, precise, and relevant to the day's objectives and tools.\n"
+    )
+
+    if strict_retry:
+        system_content += (
+            "\nCRITICAL: Your previous response failed to parse as valid JSON. "
+            "Respond ONLY with valid JSON in the exact schema above. Do NOT include markdown fences or preamble."
+        )
+
+    # Format current day info
+    day_num = current_day_info.get("day", "N/A")
+    day_title = current_day_info.get("title", "N/A")
+    tools = ", ".join(current_day_info.get("tools", []))
+    objectives = "\n".join(f"- {obj}" for obj in current_day_info.get("objectives", []))
+
+    user_content = (
+        f"CANDIDATE PROFILE:\n{candidate_summary}\n\n"
+        f"CURRENT PROBED TOPIC:\n"
+        f"Day {day_num}: {day_title}\n"
+        f"Tools: {tools}\n"
+        f"Objectives:\n{objectives}\n\n"
+        f"CONVERSATION TRANSCRIPT:\n"
+    )
+
+    for turn in transcript:
+        role = "Interviewer" if turn.get("role") == "assistant" else "Candidate"
+        user_content += f"{role}: {turn.get('content', '')}\n"
+
+    user_content += f"\nLATEST CANDIDATE ANSWER:\n{candidate_message}\n\n"
+    user_content += "Provide your structured JSON action now:"
+
+    return [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content}
+    ]
+
+
+def get_deterministic_fallback(
+    current_day_info: Dict[str, Any],
+    action_type: str = "advance"
+) -> Dict[str, Any]:
+    """
+    Returns a safe, deterministic fallback action if LLM API calls fail twice.
+    Prevents the interview from crashing or hanging on bad LLM responses.
+    """
+    day_num = current_day_info.get("day", 1)
+    day_title = current_day_info.get("title", "AI Concepts")
+
+    if action_type == "advance":
+        return {
+            "action": "advance",
+            "question": f"Let's move forward to Day {day_num}: {day_title}. Could you explain your hands-on experience and core approach with this topic?",
+            "next_day": None
+        }
+    else:
+        return {
+            "action": "followup",
+            "question": f"Could you elaborate further on how you applied {day_title} in your project, specifically regarding the technical implementation details?",
+            "next_day": None
+        }
+
+
+def generate_interview_action(
+    candidate_summary: str,
+    current_day_info: Dict[str, Any],
+    transcript: List[Dict[str, str]],
+    candidate_message: str
+) -> Dict[str, Any]:
+    """
+    Calls Groq API to decide the next interview action (followup vs advance).
+    Implements retry-once-then-fallback strategy.
+    """
+    client = get_groq_client()
+
+    # --- ATTEMPT 1 ---
+    try:
+        messages = construct_prompt_messages(
+            candidate_summary, current_day_info, transcript, candidate_message, strict_retry=False
+        )
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0.3,
+            max_tokens=500,
+            response_format={"type": "json_object"}
+        )
+        raw_output = response.choices[0].message.content
+        parsed = parse_and_validate_action(raw_output)
+        if parsed is not None:
+            return parsed
+    except Exception as e:
+        logger.warning(f"Groq API call attempt 1 failed: {type(e).__name__}")
+
+    # --- ATTEMPT 2 (RETRY ONCE WITH STRICT PROMPT REMINDER) ---
+    try:
+        messages = construct_prompt_messages(
+            candidate_summary, current_day_info, transcript, candidate_message, strict_retry=True
+        )
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0.1,
+            max_tokens=500,
+            response_format={"type": "json_object"}
+        )
+        raw_output = response.choices[0].message.content
+        parsed = parse_and_validate_action(raw_output)
+        if parsed is not None:
+            return parsed
+    except Exception as e:
+        logger.warning(f"Groq API call attempt 2 (retry) failed: {type(e).__name__}")
+
+    # --- FALLBACK ---
+    logger.warning("Using deterministic fallback action after failed LLM attempts.")
+    return get_deterministic_fallback(current_day_info, action_type="advance")

@@ -39,27 +39,26 @@ def test_turn1_and_turn2_flow():
     assert res1.status_code == 200, f"Turn 1 failed: {res1.text}"
     body1 = res1.json()
     assert body1["done"] is False
-    # Verify the reply references the top weak spot Day 29 title from curriculum.json
     assert "Day 29: Monitoring, Logging & Observability" in body1["reply"], f"Unexpected reply: {body1['reply']}"
 
     # Verify session store state
     session = session_store.get_session("test-session-123")
     assert session is not None
     assert session["questions_asked"] == 0
-    assert session["days_covered"] == set()
+    assert session["days_covered"] == {29}
     assert len(session["ranked_weak_spots"]) == 4
     assert session["ranked_weak_spots"][0]["day"] == 29
 
     # 2. Turn 2+ test with EXISTING session
     turn2_valid_payload = {
         "sessionId": "test-session-123",
-        "message": "I am ready to discuss monitoring."
+        "message": "I set up Prometheus metrics and Grafana dashboards for monitoring."
     }
     res2 = client.post("/api/interview", json=turn2_valid_payload)
     assert res2.status_code == 200
     body2 = res2.json()
     assert body2["done"] is False
-    assert body2["reply"] == "Placeholder follow-up."
+    assert isinstance(body2["reply"], str) and len(body2["reply"]) > 0
 
     # 3. Turn 2+ test with UNKNOWN session
     turn2_unknown_payload = {

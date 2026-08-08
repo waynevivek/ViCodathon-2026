@@ -33,3 +33,21 @@
 > 5. Return reply referencing the actual top weak-spot day's title (pulled from curriculum.json via day-number join).
 > 6. Handle unknown sessionId in Turn 2+ gracefully with friendly error reply.
 
+## Phase 3: Groq LLM Turn 2+ Conversation Loop & Counter Rules (2026-08-08)
+
+### Prompt
+> Read AGENTS.md fully before starting — confirm the LLM action loop design, the counter rules (8-question minimum, 4-distinct-day minimum), and the retry-once-then-fallback requirement.
+> 
+> Goal for this phase: real Turn 2+ conversation logic driven by Groq, using the session state (weak-spot ranking, candidate, counters) already built in Phase 2. Turn 1 stays as-is from Phase 2 — do not modify it except if strictly required to pass data forward correctly.
+> 
+> Build:
+> 1. llm.py
+>    - Groq API call (model: llama-3.3-70b-versatile) using GROQ_API_KEY from .env.
+>    - Prompt sent to LLM per turn includes candidate profile summary, current weak-spot day, running transcript, latest candidate message.
+>    - Structured JSON action returned: {"action": "followup", "question": "..."} or {"action": "advance", "question": "...", "next_day": <int>}.
+>    - Enforced via prompting and code-side JSON parsing.
+>    - Retry-once-then-fallback strategy implemented.
+> 2. main.py — wire Turn 2+ to append messages, call llm.py, update counters (questions_asked and days_covered), append question to transcript, check termination condition.
+> 3. Update session_store.py for transcript, current day pointer, and state helpers.
+> 4. Test locally with simulated multi-turn conversation and LLM fallback tests.
+> 5. Confirm GROQ_API_KEY is read from .env locally and never hardcoded or logged.
