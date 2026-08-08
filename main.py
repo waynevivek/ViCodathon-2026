@@ -95,7 +95,7 @@ async def interview_endpoint(req: InterviewRequest):
         )
         current_day_info = session_store.get_current_day_info(session)
 
-        # 3. Call LLM to generate structured action (followup vs advance)
+        # 3. Call LLM to evaluate candidate's answer on current topic (followup vs advance)
         action_dict = llm.generate_interview_action(
             cand_summary, current_day_info, session["transcript"], req.message
         )
@@ -118,14 +118,22 @@ async def interview_endpoint(req: InterviewRequest):
 
             # Move current day pointer to next_day (code is authoritative)
             session_store.advance_day_pointer(session, suggested_next_day=action_dict.get("next_day"))
+
+            # Retrieve the NEW current day info AFTER updating pointer
+            new_day_info = session_store.get_current_day_info(session)
+
+            # Generate opening question specifically using NEW day's curriculum context (title, tools, objectives)
+            llm_question = llm.generate_opening_question(
+                cand_summary, new_day_info, session["transcript"], req.message
+            )
         else:
             # Follow-up: Stay on current day, ensure current day is in days_covered
             cur_day = current_day_info.get("day")
             if cur_day is not None:
                 session["days_covered"].add(int(cur_day))
+            llm_question = action_dict["question"]
 
         # 6. Append LLM's question to transcript as assistant turn
-        llm_question = action_dict["question"]
         session["transcript"].append({"role": "assistant", "content": llm_question})
 
         # 7. TERMINATION CONDITION LOGIC (per AGENTS.md hard requirements):

@@ -90,7 +90,7 @@ def construct_prompt_messages(
     strict_retry: bool = False
 ) -> List[Dict[str, str]]:
     """
-    Constructs the system and user prompt messages for the Groq API call.
+    Constructs the system and user prompt messages for evaluating candidate's latest answer.
     """
     system_content = (
         "You are an expert AI Technical Interviewer conducting a dynamic interview based on a 31-day AI curriculum.\n"
@@ -99,7 +99,7 @@ def construct_prompt_messages(
         "The JSON MUST match one of the following schemas:\n\n"
         '1. {"action": "followup", "question": "<your technical follow-up question>"}\n'
         '   Use "followup" if the candidate\'s latest answer was shallow, vague, incomplete, or incorrect on the current topic.\n\n'
-        '2. {"action": "advance", "question": "<opening technical question for next topic>", "next_day": <integer_day_number_or_null>}\n'
+        '2. {"action": "advance", "question": "Advancing to next topic", "next_day": <integer_day_number_or_null>}\n'
         '   Use "advance" if the candidate demonstrated clear understanding or if follow-ups on the current topic are finished.\n\n'
         "Rules for questions:\n"
         "- Base follow-up questions directly on what the candidate just said in their latest message.\n"
@@ -218,3 +218,80 @@ def generate_interview_action(
     # --- FALLBACK ---
     logger.warning("Using deterministic fallback action after failed LLM attempts.")
     return get_deterministic_fallback(current_day_info, action_type="advance")
+
+
+def generate_opening_question(
+    candidate_summary: str,
+    new_day_info: Dict[str, Any],
+    transcript: List[Dict[str, str]],
+    candidate_message: str
+) -> str:
+    """
+    Generates an opening technical question specifically tailored to a newly advanced curriculum day.
+    Uses new_day_info (day number, title, tools, objectives) so the interviewer's question is ALWAYS
+    about the new current day's topic, not stale data from the previous day.
+    """
+    client = get_groq_client()
+
+    day_num = new_day_info.get("day", "N/A")
+    day_title = new_day_info.get("title", "N/A")
+    tools_list = new_day_info.get("tools", [])
+    tools = ", ".join(tools_list) if tools_list else "core concepts"
+    objectives_list = new_day_info.get("objectives", [])
+    objectives = "\n".join(f"- {obj}" for obj in objectives_list)
+
+    system_content = (
+        "You are an expert AI Technical Interviewer.\n"
+        "You are moving the candidate to a NEW topic in their 31-day AI curriculum.\n"
+        "Your task is to generate a single, engaging, technical opening question for this NEW topic.\n\n"
+        "CRITICAL RULES:\n"
+        "- The question MUST be strictly about the NEW topic, its specific tools, and its curriculum objectives.\n"
+        "- Do NOT ask about previous topics.\n"
+        "- State the transition clearly (e.g., 'Now let's move to Day X: Title. ...').\n"
+        "- You MUST respond ONLY with a raw JSON object: {\"question\": \"<your opening question>\"}.\n"
+        "- Do NOT output markdown code blocks or preamble.\n"
+    )
+
+    user_content = (
+        f"CANDIDATE PROFILE:\n{candidate_summary}\n\n"
+        f"NEW TOPIC TO PROBE:\n"
+        f"Day {day_num}: {day_title}\n"
+        f"Tools: {tools}\n"
+        f"Objectives:\n{objectives}\n\n"
+        f"LAST CANDIDATE MESSAGE:\n{candidate_message}\n\n"
+        f"Generate the opening question for Day {day_num}: {day_title} in JSON format now:"
+    )
+
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content}
+    ]
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0.3,
+            max_tokens=300,
+            response_format={"type": "json_object"}
+        )
+        raw_output = response.choices[0].message.content
+        cleaned = raw_output.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        elif cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        data = json.loads(cleaned.strip())
+        q = data.get("question")
+        if q and isinstance(q, str) and q.strip():
+            return q.strip()
+    except Exception as e:
+        logger.warning(f"Groq API call for opening question failed: {type(e).__name__}")
+
+    # Safe deterministic fallback for new day opening question
+    return (
+        f"Now let's move on to Day {day_num}: {day_title}. "
+        f"Could you explain your practical experience and technical approach using {tools}?"
+    )

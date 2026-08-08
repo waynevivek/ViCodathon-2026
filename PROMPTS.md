@@ -51,3 +51,14 @@
 > 3. Update session_store.py for transcript, current day pointer, and state helpers.
 > 4. Test locally with simulated multi-turn conversation and LLM fallback tests.
 > 5. Confirm GROQ_API_KEY is read from .env locally and never hardcoded or logged.
+
+## Phase 3 Bug Fix: New Topic Context on Advance (2026-08-08)
+
+### Prompt
+> Bug found in Phase 3: when the action is "advance", the interviewer's generated question is not actually about the new current day's topic — it keeps referencing the previous day's objectives even after days_covered and the day pointer have moved.
+> 
+> Investigate and fix: confirm that when building the prompt sent to Groq for question generation after an "advance" action, the code is passing the NEW current day's title/objectives/tools (from curriculum.json, via the day-number join) — not stale data from the previous day.
+> 
+> Re-run test_interview_flow.py after the fix and confirm each interviewer question, once advance happens, is actually about the correct new day's curriculum content.
+> 
+> Clarify: does the LLM's own returned "question" text get used directly, or does the code regenerate/re-prompt after updating the pointer?
