@@ -365,6 +365,7 @@
         .chat-form {
             display: flex;
             gap: 0.75rem;
+            align-items: flex-end;
         }
 
         .chat-input {
@@ -377,8 +378,13 @@
             font-size: 0.95rem;
             outline: none;
             resize: none;
-            height: 48px;
+            min-height: 48px;
+            max-height: 160px;
+            overflow-y: auto;
             font-family: inherit;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         .chat-input:focus {
@@ -521,7 +527,7 @@
                 </div>
 
                 <form id="chat-form" class="chat-form" onsubmit="handleSend(event)">
-                    <input type="text" id="user-input" class="chat-input" placeholder="Type your answer here..." autocomplete="off" />
+                    <textarea id="user-input" class="chat-input" placeholder="Type your answer here..." rows="1"></textarea>
                     <button type="submit" id="send-btn" class="btn">
                         <span>Send</span>
                     </button>
@@ -547,8 +553,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadCandidates();
             
-            // Allow Enter key to submit form
             const userInput = document.getElementById('user-input');
+            userInput.addEventListener('input', autoResizeInput);
             userInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -556,6 +562,13 @@
                 }
             });
         });
+
+        function autoResizeInput() {
+            const userInput = document.getElementById('user-input');
+            if (!userInput) return;
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+        }
 
         async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
             const controller = new AbortController();
@@ -740,6 +753,7 @@
 
             appendMessage('user', message);
             inputEl.value = '';
+            autoResizeInput();
 
             const payload = {
                 sessionId: currentSessionId,
@@ -968,6 +982,7 @@
             inputEl.disabled = false;
             inputEl.placeholder = 'Type your answer here...';
             sendBtn.disabled = false;
+            autoResizeInput();
 
             document.getElementById('restart-container').style.display = 'none';
             hideChatError();
