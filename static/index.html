@@ -5,51 +5,974 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Technical Interview Agent</title>
     <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-chat: #090d16;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            --primary-hover: #0284c7;
+            --user-bubble: #0284c7;
+            --assistant-bubble: #334155;
+            --success-bg: rgba(16, 185, 129, 0.15);
+            --success-text: #34d399;
+            --error-bg: rgba(239, 68, 68, 0.15);
+            --error-text: #f87171;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: var(--bg-main);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
+            padding: 1rem;
         }
-        .container {
-            text-align: center;
-            background-color: #1e293b;
-            padding: 2.5rem;
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            max-height: 900px;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+
+        .header-title h1 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .header-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-badge.completed {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        /* Setup Section */
+        #setup-section {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        .candidate-card {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .candidate-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .candidate-meta strong {
+            color: var(--text-main);
+        }
+
+        .mission-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            background-color: #334155;
+            color: #cbd5e1;
+        }
+
+        .tag.passed {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .tag.failed {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .tag.skipped {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            color: #ffffff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Chat Section */
+        #chat-section {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 0.75rem 1.5rem;
+            background-color: rgba(15, 23, 42, 0.4);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            background-color: var(--bg-chat);
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .message-sender {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+            padding: 0 0.2rem;
+        }
+
+        .message-bubble {
+            padding: 1rem 1.25rem;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            max-width: 480px;
-            width: 90%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
-        h1 {
-            color: #38bdf8;
+
+        .message.user .message-bubble {
+            background-color: var(--user-bubble);
+            color: #ffffff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.assistant .message-bubble {
+            background-color: var(--assistant-bubble);
+            color: var(--text-main);
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.8rem 1.2rem;
+            background-color: var(--assistant-bubble);
+            border-radius: 12px;
+            width: fit-content;
+            align-self: flex-start;
+            border: 1px solid var(--border-color);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Error Notification Banner */
+        .error-banner {
+            background-color: var(--error-bg);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: var(--error-text);
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
             margin-bottom: 0.5rem;
         }
-        p {
-            color: #94a3b8;
+
+        .retry-btn {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid #f87171;
+            border-radius: 4px;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .retry-btn:hover {
+            background-color: #f87171;
+            color: #0f172a;
+        }
+
+        /* Input Controls */
+        .chat-input-area {
+            padding: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+        }
+
+        .chat-form {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            resize: none;
+            height: 48px;
+            font-family: inherit;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+        }
+
+        .chat-input:disabled {
+            opacity: 0.5;
+        }
+
+        /* Feedback Section */
+        .feedback-container {
+            background-color: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .feedback-header {
+            font-size: 1.2rem;
+            color: var(--primary);
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .feedback-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .feedback-section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .feedback-section-title.strengths { color: #34d399; }
+        .feedback-section-title.gaps { color: #fbbf24; }
+        .feedback-section-title.next { color: #38bdf8; }
+
+        .feedback-list {
+            padding-left: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
             line-height: 1.5;
         }
-        .status {
-            display: inline-block;
-            margin-top: 1.5rem;
-            padding: 0.5rem 1rem;
-            background-color: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
+
+        .feedback-summary {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .restart-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>AI Technical Interview Agent</h1>
-        <p>ViCodathon 2026 Submission</p>
-        <div class="status">● System Operational (Skeleton)</div>
+
+    <div class="app-container">
+        <header>
+            <div class="header-title">
+                <h1>AI Technical Interview Agent</h1>
+                <p>Curriculum-Personalized Interviewer</p>
+            </div>
+            <div id="status-badge" class="status-badge">
+                <span class="status-dot"></span>
+                <span id="status-text">Ready</span>
+            </div>
+        </header>
+
+        <!-- SETUP SECTION -->
+        <div id="setup-section">
+            <div class="section-title">Step 1: Select Candidate</div>
+            
+            <div id="setup-error" class="error-banner" style="display: none;">
+                <span id="setup-error-text">Failed to load candidates.</span>
+                <button class="retry-btn" onclick="loadCandidates()">Retry</button>
+            </div>
+
+            <div class="form-group">
+                <label for="candidate-select">Candidate Profile</label>
+                <select id="candidate-select" onchange="onCandidateChange()">
+                    <option value="" disabled selected>Loading candidates...</option>
+                </select>
+            </div>
+
+            <div id="candidate-preview" class="candidate-card" style="display: none;">
+                <div class="candidate-meta">
+                    <div>Name: <strong id="cand-name">-</strong></div>
+                    <div>Role: <strong id="cand-role">-</strong></div>
+                    <div>Exp: <strong id="cand-exp">-</strong></div>
+                    <div>Education: <strong id="cand-edu">-</strong></div>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem;">Missions & Signals Overview:</label>
+                    <div id="cand-missions" class="mission-tags"></div>
+                </div>
+            </div>
+
+            <button id="start-btn" class="btn" onclick="startInterview()" disabled>
+                <span>Start Technical Interview</span>
+            </button>
+        </div>
+
+        <!-- CHAT SECTION -->
+        <div id="chat-section">
+            <div class="chat-header">
+                <span id="chat-candidate-info">Interviewing: Candidate</span>
+                <span id="chat-session-id" style="font-family: monospace; font-size: 0.75rem;">Session ID: -</span>
+            </div>
+
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages appended dynamically -->
+            </div>
+
+            <div class="chat-input-area">
+                <div id="chat-error-banner" class="error-banner" style="display: none;">
+                    <span id="chat-error-text">Network timeout occurred.</span>
+                    <button class="retry-btn" onclick="retryLastMessage()">Retry</button>
+                </div>
+
+                <form id="chat-form" class="chat-form" onsubmit="handleSend(event)">
+                    <input type="text" id="user-input" class="chat-input" placeholder="Type your answer here..." autocomplete="off" />
+                    <button type="submit" id="send-btn" class="btn">
+                        <span>Send</span>
+                    </button>
+                </form>
+
+                <div id="restart-container" class="restart-bar" style="display: none;">
+                    <button class="btn" onclick="resetApp()">Start New Interview</button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        let candidatesList = [];
+        let selectedCandidate = null;
+        let currentSessionId = null;
+        let isWaitingForResponse = false;
+        let lastFailedPayload = null;
+
+        const API_TIMEOUT_MS = 60000; // 60s timeout for Render cold start
+
+        // Load candidates on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCandidates();
+            
+            // Allow Enter key to submit form
+            const userInput = document.getElementById('user-input');
+            userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById('chat-form').requestSubmit();
+                }
+            });
+        });
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
+        }
+
+        async function loadCandidates() {
+            const selectEl = document.getElementById('candidate-select');
+            const errorBanner = document.getElementById('setup-error');
+            const errorText = document.getElementById('setup-error-text');
+            const startBtn = document.getElementById('start-btn');
+
+            errorBanner.style.display = 'none';
+            selectEl.innerHTML = '<option value="" disabled selected>Loading candidates...</option>';
+            startBtn.disabled = true;
+
+            try {
+                const res = await fetchWithTimeout('/api/candidates');
+                if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch candidates`);
+                candidatesList = await res.json();
+
+                if (!Array.isArray(candidatesList) || candidatesList.length === 0) {
+                    throw new Error('No candidate data available');
+                }
+
+                selectEl.innerHTML = '<option value="" disabled selected>-- Choose a candidate --</option>';
+                candidatesList.forEach((c, index) => {
+                    const member = c.member || {};
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = `${member.name || 'Candidate'} — ${member.jobRole || 'N/A'} (${member.yearsExperience || 0} yrs exp)`;
+                    selectEl.appendChild(opt);
+                });
+
+            } catch (err) {
+                console.error(err);
+                errorText.textContent = err.name === 'AbortError' 
+                    ? 'Connection timeout. Render server may be waking up.' 
+                    : (err.message || 'Failed to load candidates.');
+                errorBanner.style.display = 'flex';
+                selectEl.innerHTML = '<option value="" disabled selected>Failed to load candidates</option>';
+            }
+        }
+
+        function onCandidateChange() {
+            const selectEl = document.getElementById('candidate-select');
+            const idx = selectEl.value;
+            if (idx === '' || idx === null) return;
+
+            selectedCandidate = candidatesList[parseInt(idx, 10)];
+            if (!selectedCandidate) return;
+
+            const member = selectedCandidate.member || {};
+            document.getElementById('cand-name').textContent = member.name || 'N/A';
+            document.getElementById('cand-role').textContent = member.jobRole || 'N/A';
+            document.getElementById('cand-exp').textContent = `${member.yearsExperience || 0} years`;
+            document.getElementById('cand-edu').textContent = member.education || 'N/A';
+
+            // Render mission tags overview
+            const missionsContainer = document.getElementById('cand-missions');
+            missionsContainer.innerHTML = '';
+
+            const missions = selectedCandidate.missions || [];
+            missions.forEach(m => {
+                const tag = document.createElement('span');
+                let statusClass = 'passed';
+                let label = `Day ${m.day}: ${m.title || 'Mission'}`;
+
+                if (m.skipped) {
+                    statusClass = 'skipped';
+                    label += ' (Skipped)';
+                } else if (m.passed === false) {
+                    statusClass = 'failed';
+                    label += ` (Failed, ${m.attempts || 1} att)`;
+                } else {
+                    label += ` (Passed, ${m.attempts || 1} att)`;
+                }
+
+                tag.className = `tag ${statusClass}`;
+                tag.textContent = label;
+                missionsContainer.appendChild(tag);
+            });
+
+            document.getElementById('candidate-preview').style.display = 'flex';
+            document.getElementById('start-btn').disabled = false;
+        }
+
+        function generateUUID() {
+            if (crypto && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'sess-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+        }
+
+        async function startInterview() {
+            if (!selectedCandidate) return;
+
+            currentSessionId = generateUUID();
+            const startBtn = document.getElementById('start-btn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span>Connecting & Starting...</span>';
+
+            const payload = {
+                sessionId: currentSessionId,
+                candidate: selectedCandidate
+            };
+
+            try {
+                const res = await sendInterviewRequest(payload);
+                if (res) {
+                    // Transition UI to chat section
+                    document.getElementById('setup-section').style.display = 'none';
+                    document.getElementById('chat-section').style.display = 'flex';
+                    
+                    const memberName = (selectedCandidate.member && selectedCandidate.member.name) || 'Candidate';
+                    document.getElementById('chat-candidate-info').textContent = `Interviewing: ${memberName}`;
+                    document.getElementById('chat-session-id').textContent = `ID: ${currentSessionId.substring(0, 8)}...`;
+                    
+                    document.getElementById('status-text').textContent = 'Interview in Progress';
+
+                    appendMessage('assistant', res.reply);
+                }
+            } catch (err) {
+                console.error(err);
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>Start Technical Interview</span>';
+                
+                const setupErr = document.getElementById('setup-error');
+                document.getElementById('setup-error-text').textContent = err.name === 'AbortError'
+                    ? 'Server cold-start delay timed out. Please click retry.'
+                    : (err.message || 'Failed to start interview session.');
+                setupErr.style.display = 'flex';
+            }
+        }
+
+        async function sendInterviewRequest(payload) {
+            hideChatError();
+            setWaitingState(true);
+            lastFailedPayload = payload;
+
+            try {
+                const response = await fetchWithTimeout('/api/interview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.detail || `Server returned HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                setWaitingState(false);
+                lastFailedPayload = null;
+                return data;
+
+            } catch (err) {
+                setWaitingState(false);
+                throw err;
+            }
+        }
+
+        async function handleSend(e) {
+            if (e) e.preventDefault();
+            if (isWaitingForResponse) return;
+
+            const inputEl = document.getElementById('user-input');
+            const message = inputEl.value.trim();
+            if (!message) return;
+
+            appendMessage('user', message);
+            inputEl.value = '';
+
+            const payload = {
+                sessionId: currentSessionId,
+                message: message
+            };
+
+            showTypingIndicator();
+
+            try {
+                const data = await sendInterviewRequest(payload);
+                hideTypingIndicator();
+
+                if (data) {
+                    appendMessage('assistant', data.reply);
+
+                    if (data.done) {
+                        handleInterviewCompletion(data.feedback);
+                    }
+                }
+            } catch (err) {
+                hideTypingIndicator();
+                console.error(err);
+                showChatError(err.name === 'AbortError'
+                    ? 'Request timed out (Server waking up). Click Retry.'
+                    : (err.message || 'Failed to send message. Click Retry.'));
+            }
+        }
+
+        async function retryLastMessage() {
+            if (!lastFailedPayload) return;
+            hideChatError();
+
+            if (lastFailedPayload.candidate) {
+                // Retrying turn 1 start
+                startInterview();
+            } else {
+                // Retrying turn 2+ message
+                showTypingIndicator();
+                try {
+                    const data = await sendInterviewRequest(lastFailedPayload);
+                    hideTypingIndicator();
+
+                    if (data) {
+                        appendMessage('assistant', data.reply);
+                        if (data.done) {
+                            handleInterviewCompletion(data.feedback);
+                        }
+                    }
+                } catch (err) {
+                    hideTypingIndicator();
+                    showChatError(err.name === 'AbortError'
+                        ? 'Request timed out. Click Retry.'
+                        : (err.message || 'Failed to send message. Click Retry.'));
+                }
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+
+            const senderLabel = document.createElement('div');
+            senderLabel.className = 'message-sender';
+            senderLabel.textContent = sender === 'user' ? 'You (Candidate)' : 'Interviewer AI';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+
+            msgDiv.appendChild(senderLabel);
+            msgDiv.appendChild(bubble);
+            container.appendChild(msgDiv);
+
+            scrollToBottom();
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chat-messages');
+            const indicator = document.createElement('div');
+            indicator.id = 'active-typing-indicator';
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = `
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.4rem;">Interviewer is thinking...</span>
+            `;
+            container.appendChild(indicator);
+            scrollToBottom();
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('active-typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function setWaitingState(waiting) {
+            isWaitingForResponse = waiting;
+            const inputEl = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            
+            inputEl.disabled = waiting;
+            sendBtn.disabled = waiting;
+
+            if (!waiting) {
+                inputEl.focus();
+            }
+        }
+
+        function showChatError(msg) {
+            const banner = document.getElementById('chat-error-banner');
+            const text = document.getElementById('chat-error-text');
+            text.textContent = msg;
+            banner.style.display = 'flex';
+            scrollToBottom();
+        }
+
+        function hideChatError() {
+            const banner = document.getElementById('chat-error-banner');
+            banner.style.display = 'none';
+        }
+
+        function handleInterviewCompletion(feedback) {
+            const statusBadge = document.getElementById('status-badge');
+            const statusText = document.getElementById('status-text');
+            
+            statusBadge.className = 'status-badge completed';
+            statusText.textContent = 'Interview Completed';
+
+            // Disable chat form input
+            const inputEl = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            inputEl.disabled = true;
+            inputEl.placeholder = 'Interview has concluded.';
+            sendBtn.disabled = true;
+
+            // Show restart button
+            document.getElementById('restart-container').style.display = 'flex';
+
+            if (!feedback) return;
+
+            // Append Feedback container to chat
+            const container = document.getElementById('chat-messages');
+            const fbCard = document.createElement('div');
+            fbCard.className = 'feedback-container';
+
+            let html = `<div class="feedback-header">Candidate Assessment & Feedback</div>`;
+
+            if (feedback.summary) {
+                html += `
+                    <div class="feedback-section">
+                        <div class="feedback-summary">${escapeHtml(feedback.summary)}</div>
+                    </div>
+                `;
+            }
+
+            if (Array.isArray(feedback.strengths) && feedback.strengths.length > 0) {
+                html += `
+                    <div class="feedback-section">
+                        <div class="feedback-section-title strengths">✔ Key Strengths</div>
+                        <ul class="feedback-list">
+                            ${feedback.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (Array.isArray(feedback.gaps) && feedback.gaps.length > 0) {
+                html += `
+                    <div class="feedback-section">
+                        <div class="feedback-section-title gaps">⚠ Areas for Growth & Gaps</div>
+                        <ul class="feedback-list">
+                            ${feedback.gaps.map(g => `<li>${escapeHtml(g)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (Array.isArray(feedback.next) && feedback.next.length > 0) {
+                html += `
+                    <div class="feedback-section">
+                        <div class="feedback-section-title next">🚀 Recommended Next Steps</div>
+                        <ul class="feedback-list">
+                            ${feedback.next.map(n => `<li>${escapeHtml(n)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            fbCard.innerHTML = html;
+            container.appendChild(fbCard);
+            scrollToBottom();
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function resetApp() {
+            currentSessionId = null;
+            selectedCandidate = null;
+            isWaitingForResponse = false;
+            lastFailedPayload = null;
+
+            document.getElementById('status-badge').className = 'status-badge';
+            document.getElementById('status-text').textContent = 'Ready';
+
+            document.getElementById('chat-messages').innerHTML = '';
+            document.getElementById('chat-section').style.display = 'none';
+            document.getElementById('setup-section').style.display = 'flex';
+
+            const inputEl = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            inputEl.disabled = false;
+            inputEl.placeholder = 'Type your answer here...';
+            sendBtn.disabled = false;
+
+            document.getElementById('restart-container').style.display = 'none';
+            hideChatError();
+            loadCandidates();
+        }
+    </script>
 </body>
 </html>

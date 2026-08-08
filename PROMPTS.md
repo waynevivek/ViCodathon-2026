@@ -75,3 +75,17 @@
 > 2. main.py — wire feedback generation into termination path, returning real Feedback model instead of null.
 > 3. Test locally — full simulated interview through to real feedback, fallback path validation, and Phase 1-3 regression checks.
 
+## Phase 5: Minimal Chat UI (2026-08-08)
+
+### Prompt
+> We're on Phase 5 of the build plan in AGENTS.md. Phases 1-4 (walking skeleton, candidate intake + ranking, LLM followup/advance loop, feedback generation) are complete and tested. Do not modify any backend logic in main.py, session_store.py, ranking.py, or llm.py in this phase - this is UI-only.
+> 
+> Goal: Build a minimal, functional chat UI in static/index.html (single file - inline CSS and JS, no build step, no external framework) that lets someone conduct a full interview through the browser against the existing /api/interview endpoint.
+> 
+> Required behavior:
+> 1. Candidate selection (Turn 1 setup): On load, read available candidates from GET /api/candidates. Show a dropdown of candidate names. On selecting one and clicking "Start Interview", generate a sessionId (client-side UUID) and send {sessionId, candidate} to POST /api/interview per the Turn 1 contract in AGENTS.md.
+> 2. Chat loop (Turn 2+): Render assistant reply in chat bubble. Text input + send button. On send, POST {sessionId, message} and render new reply. Loop until done: true.
+> 3. Final feedback: When done: true, render feedback object clearly (summary, strengths[], gaps[], next[]). Disable further input once done.
+> 4. Error handling: Network error or timeout retry handling with 60s timeout for Render cold start.
+> 5. Styling: Clean, simple dark slate UI, legible chat bubbles, typing indicator.
+

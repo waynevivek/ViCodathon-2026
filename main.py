@@ -1,3 +1,4 @@
+import json
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +37,14 @@ async def serve_index():
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+@app.get("/api/candidates")
+async def get_candidates():
+    if os.path.exists("candidates.json"):
+        with open("candidates.json", "r") as f:
+            return json.load(f)
+    return []
 
 
 @app.post("/api/interview", response_model=InterviewResponse)

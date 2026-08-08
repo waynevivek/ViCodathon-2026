@@ -74,5 +74,23 @@ def test_turn1_and_turn2_flow():
     print("All integration tests passed successfully!")
 
 
+def test_candidates_and_static():
+    # Test GET /api/candidates
+    res = client.get("/api/candidates")
+    assert res.status_code == 200
+    candidates = res.json()
+    assert isinstance(candidates, list)
+    assert len(candidates) >= 2
+    assert candidates[0]["member"]["name"] == "Sarah Johnson"
+
+    # Test GET / serving index.html
+    res_html = client.get("/")
+    assert res_html.status_code == 200
+    assert "<title>AI Technical Interview Agent</title>" in res_html.text
+    assert "startInterview()" in res_html.text
+    print("Candidates and static index tests passed!")
+
+
 if __name__ == "__main__":
     test_turn1_and_turn2_flow()
+    test_candidates_and_static()

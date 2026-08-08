@@ -80,6 +80,8 @@ Response:
 Also add a `GET /health` route returning `{"status": "ok"}` — used to wake the Render free
 instance from sleep before a demo, not part of the hackathon spec itself.
 
+Also add a `GET /api/candidates` route returning the JSON array from `candidates.json` — used by the frontend chat UI to populate the candidate selection dropdown.
+
 ## The `candidate` object shape (exactly one entry from candidates.json, NOT the array wrapper)
 ```json
 {
