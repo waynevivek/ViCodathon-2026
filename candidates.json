@@ -1,0 +1,36 @@
+[
+  {
+    "member": {
+      "id": "CAND-001",
+      "name": "Sarah Johnson",
+      "jobRole": "Senior Data Engineer",
+      "yearsExperience": 9,
+      "education": "MS Computer Science",
+      "status": "COMPLETED"
+    },
+    "missions": [
+      { "day": 7, "title": "Embeddings 101 (Candidate Title Variant)", "passed": true, "attempts": 1 },
+      { "day": 15, "title": "RNNs & Sequence Data", "passed": false, "attempts": 4 },
+      { "day": 22, "title": "Structured JSON Generation", "passed": true, "attempts": 3 },
+      { "day": 29, "title": "Monitoring & Observability", "skipped": true, "passed": false }
+    ],
+    "signals": { "commitDays": 28, "missionsCompleted": 30, "missionsFirstTry": 20 }
+  },
+  {
+    "member": {
+      "id": "CAND-002",
+      "name": "Alex Chen",
+      "jobRole": "Junior ML Engineer",
+      "yearsExperience": 2,
+      "education": "BS Data Science",
+      "status": "COMPLETED"
+    },
+    "missions": [
+      { "day": 3, "title": "FastAPI Basics", "passed": true, "attempts": 1 },
+      { "day": 8, "title": "Vector DB Indexing", "passed": false, "attempts": 3 },
+      { "day": 16, "title": "Attention Mechanisms", "skipped": true },
+      { "day": 27, "title": "AI Agents", "passed": false, "attempts": 5 }
+    ],
+    "signals": { "commitDays": 22, "missionsCompleted": 25, "missionsFirstTry": 18 }
+  }
+]

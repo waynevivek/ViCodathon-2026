@@ -56,6 +56,12 @@ Response:
 { "reply": "...", "done": false }
 ```
 
+### Unknown Session (Turn 2+ when sessionId is missing/expired)
+Response:
+```json
+{ "reply": "Session not found, please start a new interview.", "done": true }
+```
+
 ### Final turn — when the interview is complete
 Response:
 ```json

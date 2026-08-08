@@ -1,0 +1,232 @@
+{
+  "cohort": "AI Cohort · 31 days · 8 modules",
+  "modules": [
+    { "n": 1, "title": "Environment & Tooling", "days": [1, 2, 3, 4] },
+    { "n": 2, "title": "Python & Data Foundations", "days": [5, 6, 7, 8] },
+    { "n": 3, "title": "Machine Learning Core", "days": [9, 10, 11, 12] },
+    { "n": 4, "title": "Deep Learning & Neural Networks", "days": [13, 14, 15, 16] },
+    { "n": 5, "title": "NLP & Embeddings", "days": [17, 18, 19, 20] },
+    { "n": 6, "title": "Large Language Models", "days": [21, 22, 23, 24] },
+    { "n": 7, "title": "LLM Agents & RAG", "days": [25, 26, 27, 28] },
+    { "n": 8, "title": "Production, Observability & Ops", "days": [29, 30, 31] }
+  ],
+  "days": [
+    {
+      "day": 1,
+      "title": "Python Setup & Environment Management",
+      "type": "FOUNDATION",
+      "tools": ["pip", "venv", "conda"],
+      "objectives": ["Configure Python virtual environments", "Manage dependencies with requirements.txt"]
+    },
+    {
+      "day": 2,
+      "title": "Git Workflows & Version Control for AI",
+      "type": "FOUNDATION",
+      "tools": ["git", "GitHub Action"],
+      "objectives": ["Track code changes and model artifacts", "Use branching strategies for AI projects"]
+    },
+    {
+      "day": 3,
+      "title": "REST APIs with FastAPI",
+      "type": "FOUNDATION",
+      "tools": ["FastAPI", "Uvicorn", "Pydantic"],
+      "objectives": ["Build asynchronous REST endpoints", "Define request/response schemas using Pydantic"]
+    },
+    {
+      "day": 4,
+      "title": "Docker Containers for AI Services",
+      "type": "FOUNDATION",
+      "tools": ["Docker", "Docker Compose"],
+      "objectives": ["Containerize Python applications", "Configure multi-container environments"]
+    },
+    {
+      "day": 5,
+      "title": "NumPy & Data Manipulation",
+      "type": "FOUNDATION",
+      "tools": ["NumPy"],
+      "objectives": ["Vectorized operations and array indexing", "Matrix multiplication and linear algebra basics"]
+    },
+    {
+      "day": 6,
+      "title": "Pandas Data Engineering",
+      "type": "FOUNDATION",
+      "tools": ["Pandas"],
+      "objectives": ["Clean, filter, and transform tabular datasets", "Perform aggregations and joins"]
+    },
+    {
+      "day": 7,
+      "title": "Embeddings Explained",
+      "type": "AI_CORE",
+      "tools": ["Sentence Transformers", "OpenAI Embeddings", "Scikit-learn", "Matplotlib"],
+      "objectives": ["Understand how text is converted into vector embeddings", "Calculate cosine similarity and vector distances"]
+    },
+    {
+      "day": 8,
+      "title": "Vector Databases & Indexing",
+      "type": "AI_CORE",
+      "tools": ["FAISS", "ChromaDB", "Pinecone"],
+      "objectives": ["Store and search dense vector representations", "Understand HNSW and IVF indexing strategies"]
+    },
+    {
+      "day": 9,
+      "title": "Supervised Learning Foundations",
+      "type": "ML_CORE",
+      "tools": ["Scikit-learn"],
+      "objectives": ["Train regression and classification models", "Evaluate models with precision, recall, and F1"]
+    },
+    {
+      "day": 10,
+      "title": "Gradient Descent & Optimization",
+      "type": "ML_CORE",
+      "tools": ["NumPy", "PyTorch"],
+      "objectives": ["Understand loss functions and gradient updates", "Implement stochastic gradient descent"]
+    },
+    {
+      "day": 11,
+      "title": "Decision Trees & Ensemble Methods",
+      "type": "ML_CORE",
+      "tools": ["XGBoost", "LightGBM"],
+      "objectives": ["Understand decision tree splitting criteria", "Build gradient boosted decision trees"]
+    },
+    {
+      "day": 12,
+      "title": "Feature Engineering & Preprocessing",
+      "type": "ML_CORE",
+      "tools": ["Scikit-learn"],
+      "objectives": ["Handle missing data and categorical encoding", "Scale features and avoid data leakage"]
+    },
+    {
+      "day": 13,
+      "title": "Neural Networks with PyTorch",
+      "type": "DEEP_LEARNING",
+      "tools": ["PyTorch"],
+      "objectives": ["Build multi-layer perceptrons", "Understand forward pass, loss calculation, and backpropagation"]
+    },
+    {
+      "day": 14,
+      "title": "Convolutional Neural Networks",
+      "type": "DEEP_LEARNING",
+      "tools": ["PyTorch", "Torchvision"],
+      "objectives": ["Understand convolution kernels and pooling layers", "Train image classification architectures"]
+    },
+    {
+      "day": 15,
+      "title": "Recurrent Neural Networks & LSTMs",
+      "type": "DEEP_LEARNING",
+      "tools": ["PyTorch"],
+      "objectives": ["Process sequential data with RNNs and LSTMs", "Mitigate vanishing and exploding gradients"]
+    },
+    {
+      "day": 16,
+      "title": "Transformer Architecture & Self-Attention",
+      "type": "DEEP_LEARNING",
+      "tools": ["PyTorch", "Hugging Face Transformers"],
+      "objectives": ["Understand scaled dot-product attention", "Explain multi-head attention and positional encoding"]
+    },
+    {
+      "day": 17,
+      "title": "Tokenizer Mechanics & Pretrained Models",
+      "type": "NLP",
+      "tools": ["Hugging Face Tokenizers", "BERT"],
+      "objectives": ["Understand BPE and WordPiece tokenization", "Load and fine-tune pretrained NLP models"]
+    },
+    {
+      "day": 18,
+      "title": "Text Classification & Sentiment Analysis",
+      "type": "NLP",
+      "tools": ["Transformers", "Scikit-learn"],
+      "objectives": ["Fine-tune BERT for sequence classification", "Evaluate text classifiers"]
+    },
+    {
+      "day": 19,
+      "title": "Semantic Search & Dense Retrieval",
+      "type": "NLP",
+      "tools": ["Sentence-Transformers", "FAISS"],
+      "objectives": ["Build semantic search pipelines", "Compare bi-encoder vs cross-encoder architectures"]
+    },
+    {
+      "day": 20,
+      "title": "Text Generation & Decoding Strategies",
+      "type": "NLP",
+      "tools": ["Transformers"],
+      "objectives": ["Understand greedy, beam search, top-k, and top-p sampling", "Tune generation parameters"]
+    },
+    {
+      "day": 21,
+      "title": "LLM Fundamentals & Prompt Engineering",
+      "type": "LLM",
+      "tools": ["Groq API", "OpenAI API"],
+      "objectives": ["Formulate system, user, and assistant prompts", "Apply few-shot prompting techniques"]
+    },
+    {
+      "day": 22,
+      "title": "Structured Generation & JSON Parsing",
+      "type": "LLM",
+      "tools": ["Pydantic", "Instructor", "Groq API"],
+      "objectives": ["Enforce strict JSON schema outputs from LLMs", "Handle validation errors gracefully"]
+    },
+    {
+      "day": 23,
+      "title": "Fine-Tuning LLMs with LoRA & QLoRA",
+      "type": "LLM",
+      "tools": ["PEFT", "TRL", "BitsAndBytes"],
+      "objectives": ["Understand parameter-efficient fine-tuning", "Fine-tune open-weight models on custom instruction datasets"]
+    },
+    {
+      "day": 24,
+      "title": "LLM Evaluation & Benchmarking",
+      "type": "LLM",
+      "tools": ["Ragas", "DeepEval"],
+      "objectives": ["Evaluate LLM responses for hallucinations and correctness", "Run automated test suites for prompts"]
+    },
+    {
+      "day": 25,
+      "title": "Retrieval-Augmented Generation (RAG)",
+      "type": "AGENTS_RAG",
+      "tools": ["LangChain", "LlamaIndex"],
+      "objectives": ["Build end-to-end RAG pipelines", "Implement chunking, embedding, and context insertion"]
+    },
+    {
+      "day": 26,
+      "title": "Advanced RAG & Hybrid Search",
+      "type": "AGENTS_RAG",
+      "tools": ["BM25", "Reciprocal Rank Fusion"],
+      "objectives": ["Combine keyword and vector search", "Apply re-ranking models to context chunks"]
+    },
+    {
+      "day": 27,
+      "title": "AI Agents & Tool Calling",
+      "type": "AGENTS_RAG",
+      "tools": ["LangGraph", "Groq Function Calling"],
+      "objectives": ["Design autonomous tool-calling loops", "Handle state and memory in multi-step agent reasoning"]
+    },
+    {
+      "day": 28,
+      "title": "Multi-Agent System Orchestration",
+      "type": "AGENTS_RAG",
+      "tools": ["CrewAI", "Autogen"],
+      "objectives": ["Orchestrate multiple specialized agents", "Manage inter-agent delegation and task execution"]
+    },
+    {
+      "day": 29,
+      "title": "Monitoring, Logging & Observability",
+      "type": "PRODUCTION",
+      "tools": ["Prometheus", "Grafana", "OpenTelemetry"],
+      "objectives": ["Implement telemetry and logging for AI pipelines", "Monitor latency, error rates, and token usage"]
+    },
+    {
+      "day": 30,
+      "title": "LLM Guardrails & Safety Filtering",
+      "type": "PRODUCTION",
+      "tools": ["NeMo Guardrails", "Guardrails AI"],
+      "objectives": ["Prevent prompt injection and data leaks", "Validate inputs and sanitize outputs"]
+    },
+    {
+      "day": 31,
+      "title": "Production Deployment & Scaling",
+      "type": "PRODUCTION",
+      "tools": ["vLLM", "Docker", "Render"],
+      "objectives": ["Deploy LLM services with high throughput", "Optimize latency and handle concurrent traffic"]
+    }
+  ]
+}
